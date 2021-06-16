@@ -1,9 +1,9 @@
 import json
 import boto3
 import os
-
+from boto3.dynamodb.conditions import Key
 dynamodb = boto3.client('dynamodb')
-
+dynamodb_r = boto3.resource('dynamodb')
 
 def message_handler(event, context):
     
@@ -20,6 +20,7 @@ def message_handler(event, context):
 
     table_name = os.environ['SOCKET_CONNECTION_TABLE_NAME']
     # Retrieve all connectionIds from the database
+
     for page in paginator.paginate(TableName= table_name):
         connectionIds.extend(page['Items'])
 
@@ -30,11 +31,5 @@ def message_handler(event, context):
             ConnectionId=connectionId['connectionId']['S']
         )
     
-    # testing secondary indexing
-    table = dynamodb.Table(table_name)
-    response = table.query(
-    IndexName='video_id-index',
-    KeyConditionExpression=Key('video_id').eq(video_id)
-)
 
     return {}

@@ -5,13 +5,14 @@ import os
 
 dynamodb = boto3.client('dynamodb')
 
+
 def handle(event, ctx):
 
     print("event ==>", event)
     connectionId = event['requestContext']['connectionId']
     table_name = os.environ['SOCKET_CONNECTION_TABLE_NAME']
 
-    res = dynamodb.put_item(TableName=table_name, Item={'connectionId': {"S": connectionId }} )
+    res = dynamodb.put_item(TableName=table_name, Item={'connectionId': {"S": connectionId }, "user_name":{"S":"aijaz"}} )
 
     print("res",res)
     return {
