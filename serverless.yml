@@ -1,0 +1,86 @@
+service: web-socket
+frameworkVersion: "2"
+
+provider:
+  name: aws
+  runtime: python3.8
+
+  # you can overwrite defaults here
+  stage: dev
+  region: us-east-2
+
+  # you can add statements to the Lambda function's IAM Role here
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "s3:ListBucket"
+      Resource:
+        {
+          "Fn::Join":
+            ["", ["arn:aws:s3:::", { "Ref": "ServerlessDeploymentBucket" }]],
+        }
+    - Effect: "Allow"
+      Action:
+        - "s3:PutObject"
+      Resource:
+        Fn::Join:
+          - ""
+          - - "arn:aws:s3:::"
+            - "Ref": "ServerlessDeploymentBucket"
+            - "/*"
+    - Effect: Allow
+      Action:
+        - "execute-api:ManageConnections"
+      Resource:
+        - "arn:aws:execute-api:*:*:**/@connections/*"
+    - Effect: Allow
+      Action:
+        - "dynamodb:PutItem"
+        - "dynamodb:GetItem"
+        - "dynamodb:UpdateItem"
+        - "dynamodb:DeleteItem"
+        - "dynamodb:BatchGetItem"
+        - "dynamodb:BatchWriteItem"
+        - "dynamodb:Scan"
+        - "dynamodb:Query"
+      Resource:
+        - "arn:aws:dynamodb:us-east-2:*:*"
+
+functions:
+  connect_handler:
+    handler: connect_handler/main.handle
+    events:
+      - websocket: $connect
+    environment:
+      SOCKET_CONNECTION_TABLE_NAME: ${self:custom.socketConnectionTableName}
+
+  message_handler:
+    handler: message_handler/main.message_handler
+    events:
+      - websocket: onMessage
+    environment:
+      SOCKET_CONNECTION_TABLE_NAME: ${self:custom.socketConnectionTableName}
+
+custom:
+  socketConnectionTableName: socketConnections
+  currentStage: dev
+
+resources:
+  Resources:
+    socletConnectionTableName:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      Properties:
+        TableName: ${self:custom.socketConnectionTableName}
+        AttributeDefinitions:
+          - AttributeName: connectionId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: connectionId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        SSESpecification:
+          SSEEnabled: true
+
+plugins:
+  - serverless-python-requirements
