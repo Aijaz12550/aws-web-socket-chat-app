@@ -4,7 +4,7 @@ frameworkVersion: "2"
 provider:
   name: aws
   runtime: python3.8
-
+  lambdaHashingVersion: 20201221
   # you can overwrite defaults here
   stage: dev
   region: us-east-2
@@ -56,6 +56,7 @@ functions:
 
   message_handler:
     handler: message_handler/main.message_handler
+    timeout: 29
     events:
       - websocket: onMessage
     environment:
