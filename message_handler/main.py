@@ -3,6 +3,8 @@ import boto3
 import os
 from boto3.dynamodb.conditions import Key
 import _thread
+import concurrent.futures
+from multiprocessing import Process, Pipe
 
 dynamodb = boto3.client('dynamodb')
 resource = boto3.resource('dynamodb')
@@ -42,22 +44,51 @@ def message_handler(event, context):
     for page in paginator.paginate(TableName=table_name):
         connection_ids.extend(page['Items'])
 
-    def send_multi_message(message,test):
+    def send_multi_message(message,conn):
         for j in range(1000):
             apigatewaymanagementapi.post_to_connection(
                 Data=f'{j}',
                 ConnectionId=connection_id['connectionId']['S']
             )
+    futures = []
+    # create a list to keep all processes
+    processes = []
 
+        # create a list to keep connections
+    parent_connections = []
     # Emit the recieved message to all the connected devices
     for connection_id in connection_ids:
         print("connection_id", connection_id)
 
         if sender_socket_id != connection_id["connectionId"]["S"]:
-            _thread.start_new_thread(send_multi_message,("test","test"))
-            apigatewaymanagementapi.post_to_connection(
-                Data=message,
-                ConnectionId=connection_id['connectionId']['S']
-            )
+            parent_conn, child_conn = Pipe()
+            parent_connections.append(parent_conn)
 
+            process = Process(target=send_multi_message, args=(1, child_conn,))
+            processes.append(process)
+            process.start()
+    
+    # # start all processes
+    # for process in processes:
+    #     process.start()
+    
+        # make sure that all processes have finished
+    for process in processes:
+        process.join()
+        
+    # instances_total = 0
+    # for parent_connection in parent_connections:
+    #     instances_total += parent_connection.recv()[0]
+
+    #     print("instances_total",instances_total)
+
+            # with concurrent.futures.ThreadPoolExecutor() as executor:
+            #     futures.append(executor.submit(send_multi_message,1,1))
+            # apigatewaymanagementapi.post_to_connection(
+            #     Data=message,
+            #     ConnectionId=connection_id['connectionId']['S']
+            # )
+    # for future in concurrent.futures.as_completed(futures):
+    #     print(future.result())
+    print("|| Thread Completed ||")
     return {}

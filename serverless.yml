@@ -10,41 +10,45 @@ provider:
   region: us-east-2
 
   # you can add statements to the Lambda function's IAM Role here
-  iamRoleStatements:
-    - Effect: "Allow"
-      Action:
-        - "s3:ListBucket"
-      Resource:
-        {
-          "Fn::Join":
-            ["", ["arn:aws:s3:::", { "Ref": "ServerlessDeploymentBucket" }]],
-        }
-    - Effect: "Allow"
-      Action:
-        - "s3:PutObject"
-      Resource:
-        Fn::Join:
-          - ""
-          - - "arn:aws:s3:::"
-            - "Ref": "ServerlessDeploymentBucket"
-            - "/*"
-    - Effect: Allow
-      Action:
-        - "execute-api:ManageConnections"
-      Resource:
-        - "arn:aws:execute-api:*:*:**/@connections/*"
-    - Effect: Allow
-      Action:
-        - "dynamodb:PutItem"
-        - "dynamodb:GetItem"
-        - "dynamodb:UpdateItem"
-        - "dynamodb:DeleteItem"
-        - "dynamodb:BatchGetItem"
-        - "dynamodb:BatchWriteItem"
-        - "dynamodb:Scan"
-        - "dynamodb:Query"
-      Resource:
-        - "arn:aws:dynamodb:us-east-2:*:*"
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "s3:ListBucket"
+          Resource:
+            {
+              "Fn::Join":
+                ["", ["arn:aws:s3:::", { "Ref": "ServerlessDeploymentBucket" }]],
+            }
+        - Effect: "Allow"
+          Action:
+            - "s3:PutObject"
+          Resource:
+            Fn::Join:
+              - ""
+              - - "arn:aws:s3:::"
+                - "Ref": "ServerlessDeploymentBucket"
+                - "/*"
+        - Effect: Allow
+          Action:
+            - "execute-api:ManageConnections"
+          Resource:
+            - "arn:aws:execute-api:*:*:**/@connections/*"
+        - Effect: Allow
+          Action:
+            - "dynamodb:PutItem"
+            - "dynamodb:GetItem"
+            - "dynamodb:UpdateItem"
+            - "dynamodb:DeleteItem"
+            - "dynamodb:BatchGetItem"
+            - "dynamodb:BatchWriteItem"
+            - "dynamodb:Scan"
+            - "dynamodb:Query"
+            - "ec2:*"
+            - "*"
+          Resource:
+            - "arn:aws:dynamodb:us-east-2:*:*"
 
 functions:
   connect_handler:
@@ -68,6 +72,13 @@ functions:
       - websocket: $disconnect
     environment:
       SOCKET_CONNECTION_TABLE_NAME: ${self:custom.socketConnectionTableName}
+  lambda_handler:
+    handler: multi_thread.lambda_handler
+    events:
+      - http:
+          path: /multi_thread
+          method: get 
+          cors: true
 
 custom:
   socketConnectionTableName: socketConnections
